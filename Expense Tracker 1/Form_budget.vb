@@ -4,7 +4,7 @@ Imports System.Text
 Public Class Form_budget
     Private connectionString As String = "Data Source=LAPTOP-QDECFD8R\SQLEXPRESS01;Initial Catalog=expense;Integrated Security=True;Encrypt=False"
     Private Sub Back_label_Click(sender As Object, e As EventArgs) Handles Back_label.Click
-        Me.Hide()
+        Me.Close()
         Mainform.Show()
     End Sub
 
@@ -21,7 +21,7 @@ Public Class Form_budget
                 Dim username As String = Mainform.Login_info1.Text.Substring("User: ".Length).Trim()
                 Dim userID As Integer = GetUserIDByUsername(connectionString, username)
 
-                ' Query to fetch both predefined and user-defined categories from Category and Budget tables
+
                 Dim query As String = "SELECT c.CategoryID, c.CategoryName, CASE WHEN c.CategoryID IN (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11) THEN 1 ELSE 0 END AS IsPredefined
                                     FROM Category c
                                     LEFT JOIN Budget b ON c.CategoryID = b.CategoryID AND b.UserID = @UserID"
@@ -56,7 +56,7 @@ Public Class Form_budget
         Dim selectedCategory As CategoryItem = DirectCast(cboCategory.SelectedItem, CategoryItem)
         Dim categoryID As Integer = selectedCategory.CategoryID
         Dim categoryName As String = selectedCategory.CategoryName
-        Dim isPredefined As Integer = If(selectedCategory.IsPredefined, 1, 0) ' Set IsPredefined based on the selected category
+        Dim isPredefined As Integer = If(selectedCategory.IsPredefined, 1, 0)
 
         Dim budgetAmount As Decimal
         If Decimal.TryParse(txtBudgetAmount.Text, budgetAmount) Then
@@ -74,9 +74,9 @@ Public Class Form_budget
                     Using cmd As New SqlCommand(query, con)
                         cmd.Parameters.AddWithValue("@UserID", userID)
                         cmd.Parameters.AddWithValue("@CategoryID", categoryID)
-                        cmd.Parameters.AddWithValue("@IsPredefined", isPredefined) ' Set IsPredefined based on the selected category
+                        cmd.Parameters.AddWithValue("@IsPredefined", isPredefined)
                         cmd.Parameters.AddWithValue("@BudgetAmount", budgetAmount)
-                        cmd.Parameters.AddWithValue("@BudgetDate", DateTime.Now) ' Use current date and time
+                        cmd.Parameters.AddWithValue("@BudgetDate", DateTime.Now)
                         cmd.ExecuteNonQuery()
                     End Using
 
@@ -119,40 +119,49 @@ Public Class Form_budget
     End Function
 
     Private Sub RemoveBudget_btn_Click(sender As Object, e As EventArgs) Handles RemoveBudget_btn.Click
-        Dim connectionString As String = "Data Source=LAPTOP-QDECFD8R\SQLEXPRESS01;Initial Catalog=expense;Integrated Security=True;Encrypt=False"
 
-        If cboCategory.SelectedItem IsNot Nothing Then
-            Dim selectedCategory As CategoryItem = DirectCast(cboCategory.SelectedItem, CategoryItem)
-            Dim categoryID As Integer = selectedCategory.CategoryID
-            Dim categoryName As String = selectedCategory.CategoryName
+        Dim budgetID As Integer = GetBudgetIDFromUserInput("Enter the ID of the budget you want to remove:")
 
-            Dim username As String = Mainform.Login_info1.Text.Substring("User: ".Length).Trim()
-            Dim userID As Integer = GetUserIDByUsername(connectionString, username)
-            RemoveBudget(connectionString, categoryID, userID)
-        Else
-            MessageBox.Show("Please select a category to remove the budget.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+        If budgetID > 0 Then
+            Try
+
+                RemoveBudget(connectionString, budgetID)
+                MessageBox.Show("Budget removed successfully.", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information)
+            Catch ex As Exception
+                MessageBox.Show($"Error: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+            End Try
         End If
     End Sub
 
-    Private Sub RemoveBudget(connectionString As String, categoryID As Integer, userID As Integer)
+    Private Function GetBudgetIDFromUserInput(prompt As String) As Integer
+
+        Dim input As String = InputBox(prompt, "Budget ID")
+        Dim budgetID As Integer
+
+
+        If Integer.TryParse(input, budgetID) AndAlso budgetID > 0 Then
+            Return budgetID
+        Else
+            MessageBox.Show("Invalid budget ID.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+            Return 0
+        End If
+    End Function
+
+    Private Sub RemoveBudget(connectionString As String, budgetID As Integer)
         Try
             Using con As New SqlConnection(connectionString)
-                If con.State = ConnectionState.Closed Then
-                    con.Open()
-                End If
+                con.Open()
 
-                Dim query As String = "DELETE FROM Budget WHERE UserID = @UserID AND CategoryID = @CategoryID"
+                Dim query As String = "DELETE FROM Budget WHERE BudgetID = @BudgetID"
+
 
                 Using cmd As New SqlCommand(query, con)
-                    cmd.Parameters.AddWithValue("@UserID", userID)
-                    cmd.Parameters.AddWithValue("@CategoryID", categoryID)
+                    cmd.Parameters.AddWithValue("@BudgetID", budgetID)
                     cmd.ExecuteNonQuery()
                 End Using
-
-                MessageBox.Show("Budget removed successfully.", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information)
             End Using
         Catch ex As Exception
-            MessageBox.Show($"Error: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+            Throw New Exception($"Failed to remove budget: {ex.Message}")
         End Try
     End Sub
 
@@ -164,17 +173,17 @@ Public Class Form_budget
             Dim userID As Integer = GetUserIDByUsername(connectionString, username)
 
             Dim budgets As New List(Of BudgetItem)()
-            ' Retrieve all budgets for the current user
+
             budgets = GetBudgetsForUser(connectionString, userID)
 
             If budgets.Count > 0 Then
-                ' Display a dialog box to select the budget to edit
+
                 Dim selectedBudget As BudgetItem = SelectBudget(budgets, connectionString)
                 If selectedBudget IsNot Nothing Then
-                    ' Display a form to edit the budget amount
+
                     Dim newBudgetAmount As Decimal = EditBudgetAmount(selectedBudget.BudgetAmount)
                     If newBudgetAmount <> selectedBudget.BudgetAmount Then
-                        ' Update the budget amount in the database
+
                         UpdateBudgetAmount(connectionString, selectedBudget.BudgetID, newBudgetAmount)
                     End If
                 End If
@@ -217,7 +226,7 @@ Public Class Form_budget
     Private Function SelectBudget(ByVal budgets As List(Of BudgetItem), ByVal connectionString As String) As BudgetItem
         Dim selectedBudget As BudgetItem = Nothing
 
-        ' Prompt the user to enter the budget ID
+
         Dim budgetIDInput As String = InputBox("Enter the budget ID you want to edit:" & vbCrLf & GetBudgetListAsString(budgets, connectionString), "Edit Budget", "")
 
         If Not String.IsNullOrEmpty(budgetIDInput) Then
@@ -237,7 +246,7 @@ Public Class Form_budget
         Dim sb As New StringBuilder()
 
         For Each budget As BudgetItem In budgets
-            ' Append the budget details to the string builder
+
             sb.AppendLine($"Budget ID: {budget.BudgetID},  Is Predefined: {budget.IsPredefined}, Amount: {budget.BudgetAmount}")
         Next
 
@@ -245,7 +254,7 @@ Public Class Form_budget
     End Function
 
     Private Function EditBudgetAmount(ByVal currentAmount As Decimal) As Decimal
-        ' Display a dialog box or form to allow the user to edit the budget amount
+
         Dim result As String = InputBox($"Enter the new budget amount (current amount: {currentAmount}):", "Edit Budget", currentAmount.ToString())
 
         Dim newAmount As Decimal
@@ -304,7 +313,7 @@ Public Class Form_budget
 
         Public Sub New(ByVal id As Integer, ByVal categoryId As Integer, ByVal isPredefined As Boolean, ByVal amount As Decimal)
             BudgetID = id
-            categoryId = categoryId ' Fixed the assignment to properly set the CategoryID property
+            categoryId = categoryId
             Me.IsPredefined = isPredefined
             Me.BudgetAmount = amount
         End Sub
@@ -314,14 +323,17 @@ Public Class Form_budget
         Dim viewBudgetDialog As New Form()
         viewBudgetDialog.Text = "View Budgets"
 
-        ' Create DataGridView control
+        viewBudgetDialog.StartPosition = FormStartPosition.CenterScreen
+        viewBudgetDialog.ShowIcon = False
+
+
         Dim dgvBudget As New DataGridView()
         dgvBudget.Dock = DockStyle.Fill
         dgvBudget.ReadOnly = True
         dgvBudget.AllowUserToAddRows = False
         viewBudgetDialog.Controls.Add(dgvBudget)
 
-        ' Create and configure DataGridView columns
+
         Dim colBudgetID As New DataGridViewTextBoxColumn()
         colBudgetID.HeaderText = "Budget ID"
         colBudgetID.Name = "colBudgetID"
@@ -347,10 +359,9 @@ Public Class Form_budget
         colBudgetDate.Name = "colBudgetDate"
         dgvBudget.Columns.Add(colBudgetDate)
 
-        ' Load Budget data into DataGridView
+
         LoadBudgets(dgvBudget)
 
-        ' Show the dialog box
         viewBudgetDialog.ShowDialog()
     End Sub
 
@@ -372,7 +383,7 @@ Public Class Form_budget
                         Dim isPredefined As Boolean = Convert.ToBoolean(reader("IsPredefined"))
                         Dim BudgetAmount As Decimal = Convert.ToDecimal(reader("BudgetAmount"))
                         Dim BudgetDate As Date = Convert.ToDateTime(reader("BudgetDate"))
-                        ' Add Budget details to DataGridView
+
                         dgv.Rows.Add(BudgetID, categoryName, isPredefined, BudgetAmount, BudgetDate)
                     End While
                 End Using
@@ -382,7 +393,5 @@ Public Class Form_budget
         End Try
     End Sub
 
-    Private Sub Panel1_Paint(sender As Object, e As PaintEventArgs) Handles Panel1.Paint
 
-    End Sub
 End Class

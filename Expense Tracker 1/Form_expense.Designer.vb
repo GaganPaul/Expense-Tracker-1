@@ -22,6 +22,7 @@ Partial Class Form_expense
     'Do not modify it using the code editor.
     <System.Diagnostics.DebuggerStepThrough()> _
     Private Sub InitializeComponent()
+        Dim resources As System.ComponentModel.ComponentResourceManager = New System.ComponentModel.ComponentResourceManager(GetType(Form_expense))
         Me.Remove_expense_btn = New System.Windows.Forms.Button()
         Me.Edit_expense_btn = New System.Windows.Forms.Button()
         Me.Save_expense_btn = New System.Windows.Forms.Button()
@@ -199,6 +200,7 @@ Partial Class Form_expense
         Me.Controls.Add(Me.Edit_expense_btn)
         Me.Controls.Add(Me.Save_expense_btn)
         Me.FormBorderStyle = System.Windows.Forms.FormBorderStyle.None
+        Me.Icon = CType(resources.GetObject("$this.Icon"), System.Drawing.Icon)
         Me.Name = "Form_expense"
         Me.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen
         Me.Text = "Form_expense"

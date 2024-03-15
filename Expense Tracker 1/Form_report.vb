@@ -1,28 +1,37 @@
 ﻿Imports System.Data.SqlClient
 Imports System.Globalization
 Imports System.Windows.Forms.DataVisualization.Charting
+Imports System.Drawing.Printing
 
 Public Class Form_report
     Dim connectionString As String = "Data Source=LAPTOP-QDECFD8R\SQLEXPRESS01;Initial Catalog=expense;Integrated Security=True;Encrypt=False"
+    Private currentReport As String = ""
 
     Private Sub Daily_report_btn_Click(sender As Object, e As EventArgs) Handles Daily_report_btn.Click
-        ' Extract the username from the label
+
         Dim labelContent As String = Mainform.Login_info1.Text
-        Dim username As String = labelContent.Substring(labelContent.IndexOf(":") + 2) ' Assuming the label text format is "User: username"
+        Dim username As String = labelContent.Substring(labelContent.IndexOf(":") + 2)
 
-        Dim selectedDate As Date = DateTime.Today ' Use current date
+        Dim selectedDate As Date = DateTime.Today
 
-        ' Retrieve user ID based on the logged-in username
+
         Dim userID As Integer = GetUserIDByUsername(connectionString, username)
 
-        ' Retrieve daily budget data for the selected date
+
         Dim dailyBudgetData As Decimal = GetBudgetForDate(userID, selectedDate)
 
-        ' Retrieve daily expense data for the selected date
+
         Dim dailyExpenseData As Decimal = GetExpenseForDate(userID, selectedDate)
 
-        ' Generate column chart for daily report
+
         GenerateColumnChart(Chart1, selectedDate, dailyBudgetData, dailyExpenseData)
+
+
+        Dim progressTowardsGoals As Dictionary(Of String, Decimal) = CalculateProgressTowardsGoals(userID)
+
+
+        SendGoalNotifications(progressTowardsGoals)
+        currentReport = "Daily Report"
     End Sub
 
     Private Function GetUserIDByUsername(connectionString As String, username As String) As Integer
@@ -96,24 +105,31 @@ Public Class Form_report
     End Sub
 
     Private Sub week_report_btn_Click(sender As Object, e As EventArgs) Handles week_report_button.Click
-        ' Extract the username from the label
+
         Dim labelContent As String = Mainform.Login_info1.Text
-        Dim username As String = labelContent.Substring(labelContent.IndexOf(":") + 2) ' Assuming the label text format is "User: username"
+        Dim username As String = labelContent.Substring(labelContent.IndexOf(":") + 2)
 
-        Dim startDate As Date = DateTime.Today.AddDays(-6) ' Start date of the week (7 days ago)
-        Dim endDate As Date = DateTime.Today ' End date (today)
+        Dim startDate As Date = DateTime.Today.AddDays(-6)
+        Dim endDate As Date = DateTime.Today
 
-        ' Retrieve user ID based on the logged-in username
+
         Dim userID As Integer = GetUserIDByUsername(connectionString, username)
 
-        ' Retrieve weekly budget data
+
         Dim weeklyBudgetData As Dictionary(Of Date, Decimal) = GetBudgetsForWeek(userID, startDate, endDate)
 
-        ' Retrieve weekly expense data
+
         Dim weeklyExpenseData As Dictionary(Of Date, Decimal) = GetExpensesForWeek(userID, startDate, endDate)
 
-        ' Generate column chart for weekly report
+
         GenerateColumnChart(Chart1, startDate, endDate, weeklyBudgetData, weeklyExpenseData)
+
+
+        Dim progressTowardsGoals As Dictionary(Of String, Decimal) = CalculateProgressTowardsGoals(userID)
+
+
+        SendGoalNotifications(progressTowardsGoals)
+        currentReport = "Weekly Report"
     End Sub
 
 
@@ -121,19 +137,19 @@ Public Class Form_report
     Private Sub GenerateColumnChart(chart As Chart, selectedDate As Date, budgetData As Decimal, expenseData As Decimal)
         chart.Series.Clear()
 
-        ' Add budget series
+
         Dim budgetSeries As New Series("Budget")
         budgetSeries.ChartType = SeriesChartType.Column
         budgetSeries.Points.AddXY("Budget", budgetData)
         chart.Series.Add(budgetSeries)
 
-        ' Add expense series
+
         Dim expenseSeries As New Series("Expense")
         expenseSeries.ChartType = SeriesChartType.Column
         expenseSeries.Points.AddXY("Expense", expenseData)
         chart.Series.Add(expenseSeries)
 
-        ' Customize chart appearance
+
         chart.ChartAreas(0).AxisX.Interval = 1
         chart.ChartAreas(0).AxisX.MajorGrid.Enabled = False
         chart.ChartAreas(0).AxisY.MajorGrid.Enabled = False
@@ -147,7 +163,7 @@ Public Class Form_report
     Private Sub GenerateColumnChart(chart As Chart, startDate As Date, endDate As Date, budgetData As Dictionary(Of Date, Decimal), expenseData As Dictionary(Of Date, Decimal))
         chart.Series.Clear()
 
-        ' Add budget series
+
         Dim budgetSeries As New Series("Budget")
         budgetSeries.ChartType = SeriesChartType.Column
         For Each kvp As KeyValuePair(Of Date, Decimal) In budgetData
@@ -155,7 +171,7 @@ Public Class Form_report
         Next
         chart.Series.Add(budgetSeries)
 
-        ' Add expense series
+
         Dim expenseSeries As New Series("Expense")
         expenseSeries.ChartType = SeriesChartType.Column
         For Each kvp As KeyValuePair(Of Date, Decimal) In expenseData
@@ -163,7 +179,7 @@ Public Class Form_report
         Next
         chart.Series.Add(expenseSeries)
 
-        ' Customize chart appearance
+
         chart.ChartAreas(0).AxisX.Interval = 1
         chart.ChartAreas(0).AxisX.MajorGrid.Enabled = False
         chart.ChartAreas(0).AxisY.MajorGrid.Enabled = False
@@ -277,25 +293,32 @@ Public Class Form_report
     End Function
 
     Private Sub Monthly_report_btn_Click(sender As Object, e As EventArgs) Handles Monthly_report_btn.Click
-        ' Extract the username from the label
-        Dim labelContent As String = Mainform.Login_info1.Text
-        Dim username As String = labelContent.Substring(labelContent.IndexOf(":") + 2) ' Assuming the label text format is "User: username"
 
-        ' Retrieve user ID based on the logged-in username
+        Dim labelContent As String = Mainform.Login_info1.Text
+        Dim username As String = labelContent.Substring(labelContent.IndexOf(":") + 2)
+
+
         Dim userID As Integer = GetUserIDByUsername(connectionString, username)
 
-        ' Get the selected month and year
-        Dim selectedMonth As Integer = DateTime.Today.Month ' Use the current month
-        Dim selectedYear As Integer = DateTime.Today.Year ' Use the current year
 
-        ' Retrieve the budget data for the selected month
+        Dim selectedMonth As Integer = DateTime.Today.Month
+        Dim selectedYear As Integer = DateTime.Today.Year
+
+
         Dim monthlyBudgetData As Dictionary(Of Integer, Decimal) = GetMonthlyBudgetData(userID, selectedMonth, selectedYear)
 
-        ' Retrieve the expense data for the selected month
+
         Dim monthlyExpenseData As Dictionary(Of Integer, Decimal) = GetMonthlyExpenseData(userID, selectedMonth, selectedYear)
 
-        ' Generate column chart for monthly report
+
         GenerateColumnChart(Chart1, monthlyBudgetData, monthlyExpenseData)
+
+
+        Dim progressTowardsGoals As Dictionary(Of String, Decimal) = CalculateProgressTowardsGoals(userID)
+
+
+        SendGoalNotifications(progressTowardsGoals)
+        currentReport = "Monthly Report"
     End Sub
 
 
@@ -350,11 +373,11 @@ Public Class Form_report
     Private Sub GenerateColumnChart(chart As Chart, budgetData As Dictionary(Of Integer, Decimal), expenseData As Dictionary(Of Integer, Decimal))
         chart.Series.Clear()
 
-        ' Add budget series
+
         Dim budgetSeries As New Series("Budget")
         budgetSeries.ChartType = SeriesChartType.Column
 
-        ' Add each budget amount to the chart
+
         For Each kvp As KeyValuePair(Of Integer, Decimal) In budgetData
             Dim monthName As String = CultureInfo.CurrentCulture.DateTimeFormat.GetAbbreviatedMonthName(kvp.Key)
             Dim budgetAmount As Decimal = kvp.Value
@@ -363,11 +386,11 @@ Public Class Form_report
 
         chart.Series.Add(budgetSeries)
 
-        ' Add expense series
+
         Dim expenseSeries As New Series("Expense")
         expenseSeries.ChartType = SeriesChartType.Column
 
-        ' Add each expense amount to the chart
+
         For Each kvp As KeyValuePair(Of Integer, Decimal) In expenseData
             Dim monthName As String = CultureInfo.CurrentCulture.DateTimeFormat.GetAbbreviatedMonthName(kvp.Key)
             Dim expenseAmount As Decimal = kvp.Value
@@ -376,7 +399,7 @@ Public Class Form_report
 
         chart.Series.Add(expenseSeries)
 
-        ' Customize chart appearance
+
         chart.ChartAreas(0).AxisX.Interval = 1
         chart.ChartAreas(0).AxisX.MajorGrid.Enabled = False
         chart.ChartAreas(0).AxisY.MajorGrid.Enabled = False
@@ -387,87 +410,103 @@ Public Class Form_report
         chart.ChartAreas(0).AxisY.TitleFont = New Font("Arial", 10, FontStyle.Bold)
     End Sub
     Private Sub Yearly_report_btn_Click(sender As Object, e As EventArgs) Handles Yearly_report_btn.Click
-        ' Extract the username from the label
-        Dim labelContent As String = Mainform.Login_info1.Text
-        Dim username As String = labelContent.Substring(labelContent.IndexOf(":") + 2) ' Assuming the label text format is "User: username"
 
-        ' Retrieve user ID based on the logged-in username
+        Dim labelContent As String = Mainform.Login_info1.Text
+        Dim username As String = labelContent.Substring(labelContent.IndexOf(":") + 2)
+
+
         Dim userID As Integer = GetUserIDByUsername(connectionString, username)
 
-        ' Retrieve the list of years from the database
+
         Dim years As List(Of Integer) = GetYearsFromDatabase()
 
-        ' Retrieve the budget data for each year
+
         Dim yearlyBudgetData As New Dictionary(Of Integer, Dictionary(Of Integer, Decimal))()
         For Each year As Integer In years
             yearlyBudgetData(year) = GetYearlyBudgetData(userID, year)
         Next
 
-        ' Retrieve the expense data for each year
+
         Dim yearlyExpenseData As New Dictionary(Of Integer, Dictionary(Of Integer, Decimal))()
         For Each year As Integer In years
             yearlyExpenseData(year) = GetYearlyExpenseData(userID, year)
         Next
 
-        ' Generate column chart for yearly report
-        GenerateYearlyColumnChart(Chart1, years, yearlyBudgetData, yearlyExpenseData)
-    End Sub
 
-    Private Sub GenerateYearlyColumnChart(chart As Chart, years As List(Of Integer), budgetData As Dictionary(Of Integer, Dictionary(Of Integer, Decimal)), expenseData As Dictionary(Of Integer, Dictionary(Of Integer, Decimal)))
-        chart.Series.Clear()
+        GenerateYearlyColumnChart(Chart1, years, yearlyBudgetData, yearlyExpenseData)
+
 
         For Each year As Integer In years
-            ' Add budget series for the current year
+            Dim progressTowardsGoals As Dictionary(Of String, Decimal) = CalculateProgressTowardsGoals(userID, year)
+
+            SendGoalNotifications(progressTowardsGoals)
+        Next
+        currentReport = "Yearly Overview"
+    End Sub
+
+
+    Private Sub GenerateYearlyColumnChart(chart As Chart, years As List(Of Integer), budgetData As Dictionary(Of Integer, Dictionary(Of Integer, Decimal)), expenseData As Dictionary(Of Integer, Dictionary(Of Integer, Decimal)))
+
+        chart.Series.Clear()
+
+
+        For Each year As Integer In years
+
             Dim budgetSeries As New Series($"Budget ({year})")
             budgetSeries.ChartType = SeriesChartType.Column
 
-            ' Add each budget amount to the chart
+
             For Each kvp As KeyValuePair(Of Integer, Decimal) In budgetData(year)
                 Dim monthName As String = kvp.Key.ToString()
                 Dim budgetAmount As Decimal = kvp.Value
                 budgetSeries.Points.AddXY(monthName, budgetAmount)
             Next
 
+
             chart.Series.Add(budgetSeries)
 
-            ' Add expense series for the current year
+
             Dim expenseSeries As New Series($"Expense ({year})")
             expenseSeries.ChartType = SeriesChartType.Column
 
-            ' Add each expense amount to the chart
+
             For Each kvp As KeyValuePair(Of Integer, Decimal) In expenseData(year)
                 Dim monthName As String = kvp.Key.ToString()
                 Dim expenseAmount As Decimal = kvp.Value
                 expenseSeries.Points.AddXY(monthName, expenseAmount)
             Next
 
+
             chart.Series.Add(expenseSeries)
         Next
 
-        ' Customize chart appearance
+
         chart.ChartAreas(0).AxisX.Interval = 1
         chart.ChartAreas(0).AxisX.MajorGrid.Enabled = False
         chart.ChartAreas(0).AxisY.MajorGrid.Enabled = False
-        chart.ChartAreas(0).AxisY.Maximum = 90000 ' Set maximum y-axis value to 90000
-        chart.ChartAreas(0).AxisX.Title = "Year" ' Change axis title to "Month"
+        chart.ChartAreas(0).AxisY.Maximum = 90000
+        chart.ChartAreas(0).AxisX.Title = "Year"
         chart.ChartAreas(0).AxisY.Title = "Amount"
         chart.ChartAreas(0).AxisX.TitleFont = New Font("Arial", 10, FontStyle.Bold)
         chart.ChartAreas(0).AxisY.TitleFont = New Font("Arial", 10, FontStyle.Bold)
     End Sub
 
+
+
+
     Private Function GetYearsFromDatabase() As List(Of Integer)
         Dim years As New List(Of Integer)()
 
-        ' Query distinct years from the Expense table
+
         Dim expenseQuery As String = "SELECT DISTINCT YEAR(ExpenseDate) AS Year FROM Expense"
-        ' Query distinct years from the Budget table
+
         Dim budgetQuery As String = "SELECT DISTINCT YEAR(BudgetDate) AS Year FROM Budget"
 
         Try
             Using con As New SqlConnection(connectionString)
                 con.Open()
 
-                ' Query distinct years from the Expense table
+
                 Using cmd As New SqlCommand(expenseQuery, con)
                     Using reader As SqlDataReader = cmd.ExecuteReader()
                         While reader.Read()
@@ -476,12 +515,12 @@ Public Class Form_report
                     End Using
                 End Using
 
-                ' Query distinct years from the Budget table
+
                 Using cmd As New SqlCommand(budgetQuery, con)
                     Using reader As SqlDataReader = cmd.ExecuteReader()
                         While reader.Read()
                             Dim year As Integer = Convert.ToInt32(reader("Year"))
-                            ' Add year to the list if it's not already present
+
                             If Not years.Contains(year) Then
                                 years.Add(year)
                             End If
@@ -493,7 +532,7 @@ Public Class Form_report
             MessageBox.Show($"Error retrieving years from database: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
         End Try
 
-        ' Sort the list of years in ascending order
+
         years.Sort()
 
         Return years
@@ -501,9 +540,9 @@ Public Class Form_report
     Private Function GetYearlyBudgetData(userID As Integer, year As Integer) As Dictionary(Of Integer, Decimal)
         Dim yearlyBudgetData As New Dictionary(Of Integer, Decimal)()
         Try
-            ' Initialize the dictionary with entries for all months of the year
+
             For month As Integer = 1 To 12
-                yearlyBudgetData(month) = 0 ' Initialize budget amount for each month to 0
+                yearlyBudgetData(month) = 0
             Next
 
             Using con As New SqlConnection(connectionString)
@@ -530,9 +569,9 @@ Public Class Form_report
     Private Function GetYearlyExpenseData(userID As Integer, year As Integer) As Dictionary(Of Integer, Decimal)
         Dim yearlyExpenseData As New Dictionary(Of Integer, Decimal)()
         Try
-            ' Initialize the dictionary with entries for all months of the year
+
             For month As Integer = 1 To 12
-                yearlyExpenseData(month) = 0 ' Initialize expense amount for each month to 0
+                yearlyExpenseData(month) = 0
             Next
 
             Using con As New SqlConnection(connectionString)
@@ -556,5 +595,101 @@ Public Class Form_report
         Return yearlyExpenseData
     End Function
 
+    Private Function CalculateProgressTowardsGoals(userID As Integer, Optional year As Integer = 0) As Dictionary(Of String, Decimal)
+        Dim progressData As New Dictionary(Of String, Decimal)()
+        Try
+            Using con As New SqlConnection(connectionString)
+                con.Open()
+                Dim query As String = "SELECT g.GoalName, g.TargetAmount, SUM(e.Amount) AS TotalExpense " &
+                          "FROM FinancialGoals g " &
+                          "LEFT JOIN ExpenseToGoal etg ON g.GoalID = etg.GoalID " &
+                          "LEFT JOIN Expense e ON etg.ExpenseID = e.ExpenseID " &
+                          "WHERE g.UserID = @UserID "
+                If year <> 0 Then
+                    query &= "AND YEAR(e.ExpenseDate) = @Year "
+                End If
+                query &= "GROUP BY g.GoalName, g.TargetAmount"
+
+                Using cmd As New SqlCommand(query, con)
+                    cmd.Parameters.AddWithValue("@UserID", userID)
+                    If year <> 0 Then
+                        cmd.Parameters.AddWithValue("@Year", year)
+                    End If
+
+                    Using reader As SqlDataReader = cmd.ExecuteReader()
+                        While reader.Read()
+                            Dim goalName As String = reader("GoalName").ToString()
+                            Dim targetAmount As Decimal = Convert.ToDecimal(reader("TargetAmount"))
+                            Dim totalExpense As Decimal = If(reader("TotalExpense") IsNot DBNull.Value, Convert.ToDecimal(reader("TotalExpense")), 0)
+                            Dim progress As Decimal = If(targetAmount > 0, totalExpense / targetAmount * 100, 0)
+                            progressData.Add(goalName, progress)
+                        End While
+                    End Using
+                End Using
+            End Using
+        Catch ex As Exception
+            MessageBox.Show($"Error calculating progress toward financial goals: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+        End Try
+        Return progressData
+    End Function
+
+    Private Sub SendGoalNotifications(progressData As Dictionary(Of String, Decimal))
+        Dim goalNotifications As New List(Of String)()
+        Try
+            For Each kvp As KeyValuePair(Of String, Decimal) In progressData
+                Dim goalName As String = kvp.Key
+                Dim progress As Decimal = kvp.Value
+
+                If progress < 10 Then
+                    goalNotifications.Add($"You are behind on your financial goal '{goalName}'.")
+                End If
+                If progress > 50 Then
+                    goalNotifications.Add($"Congrats You are Halfway on your financial goal '{goalName}'.")
+                End If
+                If progress > 80 Then
+                    goalNotifications.Add($"Congrats You have almost reached your financial goal '{goalName}'.")
+                End If
+                If progress = 100 Then
+                    goalNotifications.Add($"Congrats You have reached your financial goal Edit, Remove and Make a new Goal. '{goalName}'.")
+                End If
+            Next
+
+
+            If goalNotifications.Any() Then
+                Dim notificationMessage As String = String.Join(Environment.NewLine, goalNotifications)
+                MessageBox.Show(notificationMessage, "Goal Notifications", MessageBoxButtons.OK, MessageBoxIcon.Information)
+            End If
+        Catch ex As Exception
+            MessageBox.Show($"Error sending goal notifications: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+        End Try
+    End Sub
+
+    Private Sub Print_btn_Click(sender As Object, e As EventArgs) Handles Print_btn.Click
+        Dim pd As New PrintDocument()
+        AddHandler pd.PrintPage, AddressOf PrintPageHandler
+        Dim previewDialog As New PrintPreviewDialog()
+        previewDialog.Document = pd
+        previewDialog.ShowIcon = False
+        If previewDialog.ShowDialog() = DialogResult.OK Then
+            pd.Print()
+        End If
+    End Sub
+
+    Private Sub PrintPageHandler(sender As Object, e As PrintPageEventArgs)
+        Dim bmp As New Bitmap(Chart1.Width, Chart1.Height)
+        Chart1.DrawToBitmap(bmp, New Rectangle(0, 0, Chart1.Width, Chart1.Height))
+        e.Graphics.DrawImage(bmp, e.MarginBounds)
+
+        Dim reportTitle As String = GetReportTitle()
+        Dim font As New Font("Arial", 12, FontStyle.Bold)
+        Dim brush As New SolidBrush(Color.Black)
+        Dim startX As Single = e.MarginBounds.Left
+        Dim startY As Single = e.MarginBounds.Top - 50
+        e.Graphics.DrawString(reportTitle, font, brush, startX, startY)
+    End Sub
+
+    Private Function GetReportTitle() As String
+        Return currentReport
+    End Function
 
 End Class

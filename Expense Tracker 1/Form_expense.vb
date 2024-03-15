@@ -39,28 +39,62 @@ Public Class Form_expense
         If Decimal.TryParse(Txt_ExpenseAmount.Text, amount) Then
             Dim description As String = Text_description.Text.Trim()
 
-            Try
-                Using con As New SqlConnection(connectionString)
-                    con.Open()
-                    Dim query As String = "INSERT INTO Expense (UserID, CategoryID, ExpenseDate, Amount, Description) " &
-                                          "VALUES (@UserID, @CategoryID, @ExpenseDate, @Amount, @Description)"
-                    Using cmd As New SqlCommand(query, con)
-                        cmd.Parameters.AddWithValue("@UserID", userID)
-                        cmd.Parameters.AddWithValue("@CategoryID", categoryID)
-                        cmd.Parameters.AddWithValue("@ExpenseDate", DateTime.Now.Date)
-                        cmd.Parameters.AddWithValue("@Amount", amount)
-                        cmd.Parameters.AddWithValue("@Description", description)
-                        cmd.ExecuteNonQuery()
-                    End Using
-                End Using
-                MessageBox.Show("Expense saved successfully.", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information)
-            Catch ex As Exception
-                MessageBox.Show($"Error: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
-            End Try
+
+            Dim goals As List(Of FinancialGoal) = GetFinancialGoals(userID)
+
+
+            Dim goalIDNameInput As String = "Enter the financial goal ID:" & vbCrLf
+            For Each goal As FinancialGoal In goals
+                goalIDNameInput &= $"{goal.GoalID}: {goal.GoalName}" & vbCrLf
+            Next
+
+
+            Dim goalIDInput As String = InputBox(goalIDNameInput, "Financial Goal", "")
+
+            If Not String.IsNullOrEmpty(goalIDInput) Then
+                Dim goalID As Integer
+                If Integer.TryParse(goalIDInput, goalID) Then
+
+                    SaveExpenseAndAssociateWithGoal(userID, categoryID, DateTime.Now.Date, amount, description, goalID)
+                Else
+                    MessageBox.Show("Invalid financial goal ID. Please enter a valid integer value.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+                End If
+            Else
+
+                SaveExpense(userID, categoryID, DateTime.Now.Date, amount, description)
+            End If
         Else
             MessageBox.Show("Please enter a valid amount.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
         End If
     End Sub
+    Private Function GetFinancialGoals(userID As Integer) As List(Of FinancialGoal)
+        Dim goals As New List(Of FinancialGoal)()
+
+        Try
+            Using con As New SqlConnection(connectionString)
+                con.Open()
+
+                Dim query As String = "SELECT GoalID, GoalName FROM FinancialGoals WHERE UserID = @UserID"
+
+                Using cmd As New SqlCommand(query, con)
+                    cmd.Parameters.AddWithValue("@UserID", userID)
+
+                    Using reader As SqlDataReader = cmd.ExecuteReader()
+                        While reader.Read()
+                            Dim goalID As Integer = Convert.ToInt32(reader("GoalID"))
+                            Dim goalName As String = reader("GoalName").ToString()
+                            Dim goal As New FinancialGoal(goalID, goalName)
+                            goals.Add(goal)
+                        End While
+                    End Using
+                End Using
+            End Using
+        Catch ex As Exception
+            MessageBox.Show($"Error retrieving financial goals: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+        End Try
+
+        Return goals
+    End Function
 
     Private Sub Edit_expense_btn_Click(sender As Object, e As EventArgs) Handles Edit_expense_btn.Click
         Dim username As String = Mainform.Login_info1.Text.Substring("User: ".Length).Trim()
@@ -80,6 +114,60 @@ Public Class Form_expense
             Else
                 MessageBox.Show("No expenses found for the current user.", "Information", MessageBoxButtons.OK, MessageBoxIcon.Information)
             End If
+        Catch ex As Exception
+            MessageBox.Show($"Error: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+        End Try
+    End Sub
+
+    Private Sub SaveExpenseAndAssociateWithGoal(userID As Integer, categoryID As Integer, expenseDate As Date, amount As Decimal, description As String, goalID As Integer)
+        Try
+            Using con As New SqlConnection(connectionString)
+                con.Open()
+                Dim query As String = "INSERT INTO Expense (UserID, CategoryID, ExpenseDate, Amount, Description) " &
+                                  "VALUES (@UserID, @CategoryID, @ExpenseDate, @Amount, @Description); SELECT SCOPE_IDENTITY();"
+                Using cmd As New SqlCommand(query, con)
+                    cmd.Parameters.AddWithValue("@UserID", userID)
+                    cmd.Parameters.AddWithValue("@CategoryID", categoryID)
+                    cmd.Parameters.AddWithValue("@ExpenseDate", expenseDate)
+                    cmd.Parameters.AddWithValue("@Amount", amount)
+                    cmd.Parameters.AddWithValue("@Description", description)
+                    Dim expenseID As Integer = Convert.ToInt32(cmd.ExecuteScalar())
+
+
+                    InsertExpenseToGoal(con, expenseID, goalID)
+                End Using
+            End Using
+            MessageBox.Show("Expense saved successfully.", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information)
+        Catch ex As Exception
+            MessageBox.Show($"Error: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+        End Try
+    End Sub
+
+    Private Sub InsertExpenseToGoal(con As SqlConnection, expenseID As Integer, goalID As Integer)
+        Dim query As String = "INSERT INTO ExpenseToGoal (ExpenseID, GoalID) VALUES (@ExpenseID, @GoalID)"
+        Using cmd As New SqlCommand(query, con)
+            cmd.Parameters.AddWithValue("@ExpenseID", expenseID)
+            cmd.Parameters.AddWithValue("@GoalID", goalID)
+            cmd.ExecuteNonQuery()
+        End Using
+    End Sub
+
+    Private Sub SaveExpense(userID As Integer, categoryID As Integer, expenseDate As Date, amount As Decimal, description As String)
+        Try
+            Using con As New SqlConnection(connectionString)
+                con.Open()
+                Dim query As String = "INSERT INTO Expense (UserID, CategoryID, ExpenseDate, Amount, Description) " &
+                                  "VALUES (@UserID, @CategoryID, @ExpenseDate, @Amount, @Description)"
+                Using cmd As New SqlCommand(query, con)
+                    cmd.Parameters.AddWithValue("@UserID", userID)
+                    cmd.Parameters.AddWithValue("@CategoryID", categoryID)
+                    cmd.Parameters.AddWithValue("@ExpenseDate", expenseDate)
+                    cmd.Parameters.AddWithValue("@Amount", amount)
+                    cmd.Parameters.AddWithValue("@Description", description)
+                    cmd.ExecuteNonQuery()
+                End Using
+            End Using
+            MessageBox.Show("Expense saved successfully.", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information)
         Catch ex As Exception
             MessageBox.Show($"Error: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
         End Try
@@ -204,7 +292,7 @@ Public Class Form_expense
             ' Remove the expense from the database
             If RemoveExpense(expenseID) Then
                 MessageBox.Show("Expense removed successfully.", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information)
-                ' Optionally, refresh the list of expenses displayed on the form
+
             Else
                 MessageBox.Show("Failed to remove expense.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
             End If
@@ -255,37 +343,21 @@ Public Class Form_expense
         End Using
     End Function
 
-    Private Sub DeleteExpense(ByVal expenseID As Integer)
-        Try
-            Using con As New SqlConnection(connectionString)
-                con.Open()
-
-                Dim query As String = "DELETE FROM Expense WHERE ExpenseID = @ExpenseID"
-
-                Using cmd As New SqlCommand(query, con)
-                    cmd.Parameters.AddWithValue("@ExpenseID", expenseID)
-                    cmd.ExecuteNonQuery()
-                End Using
-            End Using
-
-            MessageBox.Show("Expense deleted successfully.", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information)
-        Catch ex As Exception
-            MessageBox.Show($"Error: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
-        End Try
-    End Sub
-
     Private Sub View_expense_btn_Click(sender As Object, e As EventArgs) Handles View_expense_btn.Click
         Dim viewExpenseDialog As New Form()
         viewExpenseDialog.Text = "View Expenses"
 
-        ' Create DataGridView control
+        viewExpenseDialog.StartPosition = FormStartPosition.CenterScreen
+        viewExpenseDialog.ShowIcon = False
+
+
         Dim dgvExpenses As New DataGridView()
         dgvExpenses.Dock = DockStyle.Fill
         dgvExpenses.ReadOnly = True
         dgvExpenses.AllowUserToAddRows = False
         viewExpenseDialog.Controls.Add(dgvExpenses)
 
-        ' Create and configure DataGridView columns
+
         Dim colExpenseID As New DataGridViewTextBoxColumn()
         colExpenseID.HeaderText = "Expense ID"
         colExpenseID.Name = "colExpenseID"
@@ -311,10 +383,10 @@ Public Class Form_expense
         colDescription.Name = "colDescription"
         dgvExpenses.Columns.Add(colDescription)
 
-        ' Load expenses data into DataGridView
+
         LoadExpenses(dgvExpenses)
 
-        ' Show the dialog box
+
         viewExpenseDialog.ShowDialog()
     End Sub
 
@@ -337,7 +409,7 @@ Public Class Form_expense
                         Dim amount As Decimal = Convert.ToDecimal(reader("Amount"))
                         Dim description As String = Convert.ToString(reader("Description"))
 
-                        ' Add expense details to DataGridView
+
                         dgv.Rows.Add(expenseID, categoryName, expenseDate, amount, description)
                     End While
                 End Using
@@ -348,9 +420,11 @@ Public Class Form_expense
     End Sub
 
     Private Sub Back2_label_Click(sender As Object, e As EventArgs) Handles Back2_label.Click
-        Me.Hide()
+        Me.Close()
         Mainform.Show()
     End Sub
+
+
 End Class
 
 Public Class CategoryItem
@@ -376,5 +450,14 @@ Public Class ExpenseItem
         ExpenseID = id
         categoryId = categoryId
         ExpenseAmount = amount
+    End Sub
+End Class
+Public Class FinancialGoal
+    Public Property GoalID As Integer
+    Public Property GoalName As String
+
+    Public Sub New(ByVal id As Integer, ByVal name As String)
+        Me.GoalID = id
+        Me.GoalName = name
     End Sub
 End Class

@@ -149,6 +149,12 @@
       <DependentUpon>Settings.settings</DependentUpon>
       <DesignTimeSharedInput>True</DesignTimeSharedInput>
     </Compile>
+    <Compile Include="YearlyOverviewForm.Designer.vb">
+      <DependentUpon>YearlyOverviewForm.vb</DependentUpon>
+    </Compile>
+    <Compile Include="YearlyOverviewForm.vb">
+      <SubType>Form</SubType>
+    </Compile>
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Form_budget.resx">
@@ -183,6 +189,9 @@
       <LastGenOutput>Resources.Designer.vb</LastGenOutput>
       <CustomToolNamespace>My.Resources</CustomToolNamespace>
       <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <EmbeddedResource Include="YearlyOverviewForm.resx">
+      <DependentUpon>YearlyOverviewForm.vb</DependentUpon>
     </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>

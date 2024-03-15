@@ -1,9 +1,9 @@
-﻿<Global.Microsoft.VisualBasic.CompilerServices.DesignerGenerated()> _
+﻿<Global.Microsoft.VisualBasic.CompilerServices.DesignerGenerated()>
 Partial Class Form_categories
     Inherits System.Windows.Forms.Form
 
     'Form overrides dispose to clean up the component list.
-    <System.Diagnostics.DebuggerNonUserCode()> _
+    <System.Diagnostics.DebuggerNonUserCode()>
     Protected Overrides Sub Dispose(ByVal disposing As Boolean)
         Try
             If disposing AndAlso components IsNot Nothing Then
@@ -20,21 +20,23 @@ Partial Class Form_categories
     'NOTE: The following procedure is required by the Windows Form Designer
     'It can be modified using the Windows Form Designer.  
     'Do not modify it using the code editor.
-    <System.Diagnostics.DebuggerStepThrough()> _
+    <System.Diagnostics.DebuggerStepThrough()>
     Private Sub InitializeComponent()
+        Dim resources As System.ComponentModel.ComponentResourceManager = New System.ComponentModel.ComponentResourceManager(GetType(Form_categories))
         Me.Enter_categories_txt = New System.Windows.Forms.TextBox()
         Me.Save2_btn = New System.Windows.Forms.Button()
         Me.Button2 = New System.Windows.Forms.Button()
         Me.Panel1 = New System.Windows.Forms.Panel()
         Me.Label1 = New System.Windows.Forms.Label()
         Me.Remove_btn = New System.Windows.Forms.Button()
+        Me.View_categories_btn = New System.Windows.Forms.Button()
         Me.Panel1.SuspendLayout()
         Me.SuspendLayout()
         '
         'Enter_categories_txt
         '
         Me.Enter_categories_txt.BackColor = System.Drawing.Color.Beige
-        Me.Enter_categories_txt.Location = New System.Drawing.Point(41, 100)
+        Me.Enter_categories_txt.Location = New System.Drawing.Point(41, 82)
         Me.Enter_categories_txt.Name = "Enter_categories_txt"
         Me.Enter_categories_txt.Size = New System.Drawing.Size(204, 20)
         Me.Enter_categories_txt.TabIndex = 0
@@ -42,7 +44,7 @@ Partial Class Form_categories
         'Save2_btn
         '
         Me.Save2_btn.BackColor = System.Drawing.Color.Beige
-        Me.Save2_btn.Location = New System.Drawing.Point(74, 152)
+        Me.Save2_btn.Location = New System.Drawing.Point(74, 118)
         Me.Save2_btn.Name = "Save2_btn"
         Me.Save2_btn.Size = New System.Drawing.Size(137, 23)
         Me.Save2_btn.TabIndex = 1
@@ -52,7 +54,7 @@ Partial Class Form_categories
         'Button2
         '
         Me.Button2.BackColor = System.Drawing.Color.Beige
-        Me.Button2.Location = New System.Drawing.Point(74, 230)
+        Me.Button2.Location = New System.Drawing.Point(74, 245)
         Me.Button2.Name = "Button2"
         Me.Button2.Size = New System.Drawing.Size(137, 23)
         Me.Button2.TabIndex = 2
@@ -81,12 +83,22 @@ Partial Class Form_categories
         'Remove_btn
         '
         Me.Remove_btn.BackColor = System.Drawing.Color.Beige
-        Me.Remove_btn.Location = New System.Drawing.Point(74, 191)
+        Me.Remove_btn.Location = New System.Drawing.Point(74, 201)
         Me.Remove_btn.Name = "Remove_btn"
         Me.Remove_btn.Size = New System.Drawing.Size(137, 23)
         Me.Remove_btn.TabIndex = 4
         Me.Remove_btn.Text = "Remove Categories"
         Me.Remove_btn.UseVisualStyleBackColor = False
+        '
+        'View_categories_btn
+        '
+        Me.View_categories_btn.BackColor = System.Drawing.Color.Beige
+        Me.View_categories_btn.Location = New System.Drawing.Point(74, 162)
+        Me.View_categories_btn.Name = "View_categories_btn"
+        Me.View_categories_btn.Size = New System.Drawing.Size(137, 23)
+        Me.View_categories_btn.TabIndex = 5
+        Me.View_categories_btn.Text = "View Categories"
+        Me.View_categories_btn.UseVisualStyleBackColor = False
         '
         'Form_categories
         '
@@ -94,12 +106,14 @@ Partial Class Form_categories
         Me.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font
         Me.BackColor = System.Drawing.Color.AliceBlue
         Me.ClientSize = New System.Drawing.Size(280, 280)
+        Me.Controls.Add(Me.View_categories_btn)
         Me.Controls.Add(Me.Remove_btn)
         Me.Controls.Add(Me.Panel1)
         Me.Controls.Add(Me.Button2)
         Me.Controls.Add(Me.Save2_btn)
         Me.Controls.Add(Me.Enter_categories_txt)
-        Me.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedToolWindow
+        Me.FormBorderStyle = System.Windows.Forms.FormBorderStyle.None
+        Me.Icon = CType(resources.GetObject("$this.Icon"), System.Drawing.Icon)
         Me.Name = "Form_categories"
         Me.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen
         Me.Text = "Custom Categories"
@@ -115,4 +129,5 @@ Partial Class Form_categories
     Friend WithEvents Panel1 As Panel
     Friend WithEvents Label1 As Label
     Friend WithEvents Remove_btn As Button
+    Friend WithEvents View_categories_btn As Button
 End Class

@@ -1,16 +1,17 @@
 ﻿Imports System.Data.SqlClient
+Imports System.Text
 
 Public Class Form_categories
     Public con As New SqlConnection("Data Source=LAPTOP-QDECFD8R\SQLEXPRESS01;Initial Catalog=expense;Integrated Security=True;Encrypt=False")
 
     Private Sub Save2_btn_Click(sender As Object, e As EventArgs) Handles Save2_btn.Click
-        ' Get the category entered by the user
+
         Dim categoryName As String = Enter_categories_txt.Text.Trim()
         Dim connectionString As String = "Data Source=LAPTOP-QDECFD8R\SQLEXPRESS01;Initial Catalog=expense;Integrated Security=True;Encrypt=False"
 
-        ' Check if the category name is not empty
+
         If categoryName <> "" Then
-            ' Check if the category already exists
+
             If IsCategoryExists(connectionString, categoryName) Then
                 MessageBox.Show("Category already exists. Please enter a different category name.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
                 Return
@@ -25,7 +26,7 @@ Public Class Form_categories
                     Dim query As String = "INSERT INTO Category (CategoryName, IsPredefined, CreatedByUserID) VALUES (@CategoryName, @IsPredefined, @CreatedByUserID); SELECT @@IDENTITY;"
                     Using cmd As New SqlCommand(query, con)
                         cmd.Parameters.AddWithValue("@CategoryName", categoryName)
-                        cmd.Parameters.AddWithValue("@IsPredefined", 0) ' Set IsPredefined to 0 for user-defined category
+                        cmd.Parameters.AddWithValue("@IsPredefined", 0)
                         cmd.Parameters.AddWithValue("@CreatedByUserID", userID)
                         Dim newCategoryID As Integer = Convert.ToInt32(cmd.ExecuteScalar())
                         MessageBox.Show($"Category '{categoryName}' added successfully.", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information)
@@ -40,7 +41,7 @@ Public Class Form_categories
     End Sub
 
     Private Sub Button2_Click(sender As Object, e As EventArgs) Handles Button2.Click
-        Me.Hide()
+        Me.Close()
         Mainform.Show()
     End Sub
 
@@ -120,5 +121,45 @@ Public Class Form_categories
 
         Return isExists
     End Function
+
+    Private Sub View_categories_btn_Click(sender As Object, e As EventArgs) Handles View_categories_btn.Click
+        Dim connectionString As String = "Data Source=LAPTOP-QDECFD8R\SQLEXPRESS01;Initial Catalog=expense;Integrated Security=True;Encrypt=False"
+        Try
+            Dim customCategories As String = GetCustomCategories(connectionString)
+            If customCategories <> "" Then
+                MessageBox.Show("Custom Categories:" & vbCrLf & customCategories, "Custom Categories", MessageBoxButtons.OK, MessageBoxIcon.Information)
+            Else
+                MessageBox.Show("No custom categories found.", "Custom Categories", MessageBoxButtons.OK, MessageBoxIcon.Information)
+            End If
+        Catch ex As Exception
+            MessageBox.Show($"Error: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+        End Try
+    End Sub
+
+    Private Function GetCustomCategories(connectionString As String) As String
+        Dim customCategories As New StringBuilder()
+        Try
+            Using con As New SqlConnection(connectionString)
+                con.Open()
+
+                Dim query As String = "SELECT CategoryName FROM Category WHERE IsPredefined = 0"
+
+                Using cmd As New SqlCommand(query, con)
+                    Dim reader As SqlDataReader = cmd.ExecuteReader()
+
+                    While reader.Read()
+                        Dim categoryName As String = Convert.ToString(reader("CategoryName"))
+                        customCategories.AppendLine(categoryName)
+                    End While
+                End Using
+            End Using
+        Catch ex As Exception
+            MessageBox.Show($"Error: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+        End Try
+
+        Return customCategories.ToString()
+    End Function
+
+
 End Class
 

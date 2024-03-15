@@ -22,6 +22,7 @@ Partial Class Form_settings
     'Do not modify it using the code editor.
     <System.Diagnostics.DebuggerStepThrough()> _
     Private Sub InitializeComponent()
+        Dim resources As System.ComponentModel.ComponentResourceManager = New System.ComponentModel.ComponentResourceManager(GetType(Form_settings))
         Me.Category_btn = New System.Windows.Forms.Button()
         Me.Back1_btn = New System.Windows.Forms.Button()
         Me.Label1 = New System.Windows.Forms.Label()
@@ -114,6 +115,7 @@ Partial Class Form_settings
         Me.Controls.Add(Me.Back1_btn)
         Me.Controls.Add(Me.Category_btn)
         Me.FormBorderStyle = System.Windows.Forms.FormBorderStyle.None
+        Me.Icon = CType(resources.GetObject("$this.Icon"), System.Drawing.Icon)
         Me.Name = "Form_settings"
         Me.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen
         Me.Text = "Settings"
