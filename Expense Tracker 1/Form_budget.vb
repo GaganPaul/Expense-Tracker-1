@@ -21,10 +21,10 @@ Public Class Form_budget
                 Dim username As String = Mainform.Login_info1.Text.Substring("User: ".Length).Trim()
                 Dim userID As Integer = GetUserIDByUsername(connectionString, username)
 
-
-                Dim query As String = "SELECT c.CategoryID, c.CategoryName, CASE WHEN c.CategoryID IN (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11) THEN 1 ELSE 0 END AS IsPredefined
-                                    FROM Category c
-                                    LEFT JOIN Budget b ON c.CategoryID = b.CategoryID AND b.UserID = @UserID"
+                Dim query As String = "SELECT c.CategoryID, c.CategoryName, 
+                                   CASE WHEN c.CategoryID IN (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11) THEN 1 ELSE 0 END AS IsPredefined
+                                   FROM Category c
+                                   WHERE c.CreatedByUserID = @UserID OR c.IsPredefined = 1"
 
                 Using cmd As New SqlCommand(query, con)
                     cmd.Parameters.AddWithValue("@UserID", userID)
@@ -44,6 +44,7 @@ Public Class Form_budget
             MessageBox.Show($"Error: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
         End Try
     End Sub
+
 
 
     Private Sub btnSave_Click(sender As Object, e As EventArgs) Handles btnSave.Click

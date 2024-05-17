@@ -10,17 +10,28 @@ Public Class Form_expense
 
     Private Sub PopulateCategories()
         Try
+            Dim username As String = Mainform.Login_info1.Text.Substring("User: ".Length).Trim()
+            Dim userID As Integer = GetUserIDByUsername(connectionString, username)
+
             Using con As New SqlConnection(connectionString)
                 con.Open()
 
-                Dim query As String = "SELECT CategoryID, CategoryName FROM Category"
+                Dim query As String = "SELECT c.CategoryID, c.CategoryName, 
+                            CASE WHEN c.CategoryID IN (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11) THEN 1 ELSE 0 END AS IsPredefined
+                            FROM Category c
+                            WHERE c.CreatedByUserID = @UserID OR c.IsPredefined = 1"
+
                 Using cmd As New SqlCommand(query, con)
+                    cmd.Parameters.AddWithValue("@UserID", userID)
+
                     Dim reader As SqlDataReader = cmd.ExecuteReader()
 
                     While reader.Read()
                         Dim categoryID As Integer = Convert.ToInt32(reader("CategoryID"))
                         Dim categoryName As String = Convert.ToString(reader("CategoryName"))
-                        Cbo1Category.Items.Add(New CategoryItem(categoryID, categoryName))
+                        Dim isPredefined As Boolean = Convert.ToBoolean(reader("IsPredefined"))
+                        Dim categoryItem As New CategoryItem(categoryID, categoryName, isPredefined)
+                        Cbo1Category.Items.Add(categoryItem)
                     End While
                 End Using
             End Using
@@ -429,10 +440,12 @@ End Class
 Public Class CategoryItem
     Public Property CategoryID As Integer
     Public Property CategoryName As String
+    Public Property IsPredefined As Boolean
 
-    Public Sub New(ByVal id As Integer, ByVal name As String)
+    Public Sub New(ByVal id As Integer, ByVal name As String, ByVal isPredefined As Boolean)
         CategoryID = id
         CategoryName = name
+        Me.IsPredefined = isPredefined
     End Sub
 
     Public Overrides Function ToString() As String
