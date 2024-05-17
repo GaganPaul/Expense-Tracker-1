@@ -2,7 +2,7 @@
 Imports System.Text
 
 Public Class Form_expense
-    Private connectionString As String = "Data Source=LAPTOP-QDECFD8R\SQLEXPRESS01;Initial Catalog=expense;Integrated Security=True;Encrypt=False"
+    Private connectionString As String = "Data Source=LAPTOP-QDECFD8R\SQLEXPRESS01;Initial Catalog=expense;Integrated Security=True;Encrypt=FalseData Source=LAPTOP-QDECFD8R\SQLEXPRESS01;Initial Catalog=expense;Integrated Security=True;Encrypt=False"
 
     Private Sub Form_expense_Load(sender As Object, e As EventArgs) Handles MyBase.Load
         PopulateCategories()
@@ -346,17 +346,14 @@ Public Class Form_expense
     Private Sub View_expense_btn_Click(sender As Object, e As EventArgs) Handles View_expense_btn.Click
         Dim viewExpenseDialog As New Form()
         viewExpenseDialog.Text = "View Expenses"
-
         viewExpenseDialog.StartPosition = FormStartPosition.CenterScreen
         viewExpenseDialog.ShowIcon = False
-
 
         Dim dgvExpenses As New DataGridView()
         dgvExpenses.Dock = DockStyle.Fill
         dgvExpenses.ReadOnly = True
         dgvExpenses.AllowUserToAddRows = False
         viewExpenseDialog.Controls.Add(dgvExpenses)
-
 
         Dim colExpenseID As New DataGridViewTextBoxColumn()
         colExpenseID.HeaderText = "Expense ID"
@@ -383,23 +380,26 @@ Public Class Form_expense
         colDescription.Name = "colDescription"
         dgvExpenses.Columns.Add(colDescription)
 
+        Dim username As String = Mainform.Login_info1.Text.Substring("User: ".Length).Trim()
+        Dim userID As Integer = GetUserIDByUsername(connectionString, username)
 
-        LoadExpenses(dgvExpenses)
-
+        LoadExpenses(dgvExpenses, userID)
 
         viewExpenseDialog.ShowDialog()
     End Sub
 
-    Private Sub LoadExpenses(ByVal dgv As DataGridView)
+    Private Sub LoadExpenses(ByVal dgv As DataGridView, ByVal userID As Integer)
         Try
             Using con As New SqlConnection(connectionString)
                 con.Open()
 
                 Dim query As String = "SELECT e.ExpenseID, c.CategoryName, e.ExpenseDate, e.Amount, e.Description " &
                                       "FROM Expense e " &
-                                      "INNER JOIN Category c ON e.CategoryID = c.CategoryID"
+                                      "INNER JOIN Category c ON e.CategoryID = c.CategoryID " &
+                                      "WHERE e.UserID = @UserID"
 
                 Using cmd As New SqlCommand(query, con)
+                    cmd.Parameters.AddWithValue("@UserID", userID)
                     Dim reader As SqlDataReader = cmd.ExecuteReader()
 
                     While reader.Read()
@@ -408,7 +408,6 @@ Public Class Form_expense
                         Dim expenseDate As Date = Convert.ToDateTime(reader("ExpenseDate"))
                         Dim amount As Decimal = Convert.ToDecimal(reader("Amount"))
                         Dim description As String = Convert.ToString(reader("Description"))
-
 
                         dgv.Rows.Add(expenseID, categoryName, expenseDate, amount, description)
                     End While

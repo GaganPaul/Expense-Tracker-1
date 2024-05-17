@@ -370,11 +370,18 @@ Public Class Form_budget
             Using con As New SqlConnection(connectionString)
                 con.Open()
 
+                ' Get the UserID of the currently logged-in user
+                Dim username As String = Mainform.Login_info1.Text.Substring("User: ".Length).Trim()
+                Dim userID As Integer = GetUserIDByUsername(connectionString, username)
+
+                ' SQL query to fetch budgets for the current user
                 Dim query As String = "SELECT b.BudgetID, c.CategoryName, b.IsPredefined, b.BudgetAmount, b.BudgetDate " &
-                      "FROM Budget b " &
-                      "INNER JOIN Category c ON b.CategoryID = c.CategoryID"
+                                      "FROM Budget b " &
+                                      "INNER JOIN Category c ON b.CategoryID = c.CategoryID " &
+                                      "WHERE b.UserID = @UserID"
 
                 Using cmd As New SqlCommand(query, con)
+                    cmd.Parameters.AddWithValue("@UserID", userID)
                     Dim reader As SqlDataReader = cmd.ExecuteReader()
 
                     While reader.Read()

@@ -151,4 +151,7 @@ Public Class Form_settings
         Form_goals.Show()
     End Sub
 
+    Private Sub Form_settings_Load(sender As Object, e As EventArgs) Handles MyBase.Load
+
+    End Sub
 End Class

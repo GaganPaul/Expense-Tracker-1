@@ -245,6 +245,7 @@ Partial Class Mainform
         '
         Me.Custom_PictureBox.BackgroundImage = CType(resources.GetObject("Custom_PictureBox.BackgroundImage"), System.Drawing.Image)
         Me.Custom_PictureBox.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Stretch
+        Me.Custom_PictureBox.Cursor = System.Windows.Forms.Cursors.Hand
         Me.Custom_PictureBox.Location = New System.Drawing.Point(437, 73)
         Me.Custom_PictureBox.Name = "Custom_PictureBox"
         Me.Custom_PictureBox.Size = New System.Drawing.Size(244, 109)
@@ -255,6 +256,7 @@ Partial Class Mainform
         '
         Me.Financial_PictureBox.BackgroundImage = CType(resources.GetObject("Financial_PictureBox.BackgroundImage"), System.Drawing.Image)
         Me.Financial_PictureBox.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Stretch
+        Me.Financial_PictureBox.Cursor = System.Windows.Forms.Cursors.Hand
         Me.Financial_PictureBox.Location = New System.Drawing.Point(270, 225)
         Me.Financial_PictureBox.Name = "Financial_PictureBox"
         Me.Financial_PictureBox.Size = New System.Drawing.Size(244, 108)
@@ -265,6 +267,7 @@ Partial Class Mainform
         '
         Me.Year_Overview_PictureBox.BackgroundImage = CType(resources.GetObject("Year_Overview_PictureBox.BackgroundImage"), System.Drawing.Image)
         Me.Year_Overview_PictureBox.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Stretch
+        Me.Year_Overview_PictureBox.Cursor = System.Windows.Forms.Cursors.Hand
         Me.Year_Overview_PictureBox.Location = New System.Drawing.Point(612, 225)
         Me.Year_Overview_PictureBox.Name = "Year_Overview_PictureBox"
         Me.Year_Overview_PictureBox.Size = New System.Drawing.Size(243, 108)

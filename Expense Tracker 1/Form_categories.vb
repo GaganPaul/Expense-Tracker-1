@@ -5,20 +5,17 @@ Public Class Form_categories
     Public con As New SqlConnection("Data Source=LAPTOP-QDECFD8R\SQLEXPRESS01;Initial Catalog=expense;Integrated Security=True;Encrypt=False")
 
     Private Sub Save2_btn_Click(sender As Object, e As EventArgs) Handles Save2_btn.Click
-
         Dim categoryName As String = Enter_categories_txt.Text.Trim()
         Dim connectionString As String = "Data Source=LAPTOP-QDECFD8R\SQLEXPRESS01;Initial Catalog=expense;Integrated Security=True;Encrypt=False"
 
-
         If categoryName <> "" Then
-
-            If IsCategoryExists(connectionString, categoryName) Then
-                MessageBox.Show("Category already exists. Please enter a different category name.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
-                Return
-            End If
-
             Dim username As String = Mainform.Login_info1.Text.Substring("User: ".Length).Trim()
             Dim userID As Integer = GetUserIDByUsername(connectionString, username)
+
+            If IsCategoryExists(connectionString, categoryName, userID) Then
+                MessageBox.Show("Category already exists for this user. Please enter a different category name.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+                Return
+            End If
 
             Try
                 Using con As New SqlConnection(connectionString)
@@ -39,6 +36,7 @@ Public Class Form_categories
             MessageBox.Show("Please enter a category.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
         End If
     End Sub
+
 
     Private Sub Button2_Click(sender As Object, e As EventArgs) Handles Button2.Click
         Me.Close()
@@ -73,6 +71,9 @@ Public Class Form_categories
             MessageBox.Show("Please enter a category to remove.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
         End If
     End Sub
+
+
+
     Private Function GetUserIDByUsername(connectionString As String, username As String) As Integer
         Dim userID As Integer = 0
 
@@ -99,7 +100,8 @@ Public Class Form_categories
 
         Return userID
     End Function
-    Private Function IsCategoryExists(ByVal connectionString As String, ByVal categoryName As String) As Boolean
+
+    Private Function IsCategoryExists(ByVal connectionString As String, ByVal categoryName As String, ByVal createdByUserID As Integer) As Boolean
         Dim isExists As Boolean = False
 
         Try
@@ -108,9 +110,10 @@ Public Class Form_categories
                     con.Open()
                 End If
 
-                Dim query As String = "SELECT COUNT(*) FROM Category WHERE CategoryName = @CategoryName"
+                Dim query As String = "SELECT COUNT(*) FROM Category WHERE CategoryName = @CategoryName AND CreatedByUserID = @CreatedByUserID"
                 Using cmd As New SqlCommand(query, con)
                     cmd.Parameters.AddWithValue("@CategoryName", categoryName)
+                    cmd.Parameters.AddWithValue("@CreatedByUserID", createdByUserID)
                     Dim count As Integer = Convert.ToInt32(cmd.ExecuteScalar())
                     isExists = (count > 0)
                 End Using
@@ -122,10 +125,14 @@ Public Class Form_categories
         Return isExists
     End Function
 
+
+
     Private Sub View_categories_btn_Click(sender As Object, e As EventArgs) Handles View_categories_btn.Click
         Dim connectionString As String = "Data Source=LAPTOP-QDECFD8R\SQLEXPRESS01;Initial Catalog=expense;Integrated Security=True;Encrypt=False"
         Try
-            Dim customCategories As String = GetCustomCategories(connectionString)
+            Dim username As String = Mainform.Login_info1.Text.Substring("User: ".Length).Trim()
+            Dim userID As Integer = GetUserIDByUsername(connectionString, username)
+            Dim customCategories As String = GetCustomCategories(connectionString, userID)
             If customCategories <> "" Then
                 MessageBox.Show("Custom Categories:" & vbCrLf & customCategories, "Custom Categories", MessageBoxButtons.OK, MessageBoxIcon.Information)
             Else
@@ -136,17 +143,15 @@ Public Class Form_categories
         End Try
     End Sub
 
-    Private Function GetCustomCategories(connectionString As String) As String
+    Private Function GetCustomCategories(connectionString As String, userID As Integer) As String
         Dim customCategories As New StringBuilder()
         Try
             Using con As New SqlConnection(connectionString)
                 con.Open()
-
-                Dim query As String = "SELECT CategoryName FROM Category WHERE IsPredefined = 0"
-
+                Dim query As String = "SELECT CategoryName FROM Category WHERE IsPredefined = 0 AND CreatedByUserID = @CreatedByUserID"
                 Using cmd As New SqlCommand(query, con)
+                    cmd.Parameters.AddWithValue("@CreatedByUserID", userID)
                     Dim reader As SqlDataReader = cmd.ExecuteReader()
-
                     While reader.Read()
                         Dim categoryName As String = Convert.ToString(reader("CategoryName"))
                         customCategories.AppendLine(categoryName)
@@ -156,10 +161,9 @@ Public Class Form_categories
         Catch ex As Exception
             MessageBox.Show($"Error: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
         End Try
-
         Return customCategories.ToString()
     End Function
 
-
 End Class
+
 
