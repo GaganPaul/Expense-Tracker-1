@@ -17,6 +17,8 @@ Public Class Form_report
 
         Dim userID As Integer = GetUserIDByUsername(connectionString, username)
 
+        DisplayBudgetAndExpenses(userID, selectedDate)
+
 
         Dim dailyBudgetData As Decimal = GetBudgetForDate(userID, selectedDate)
 
@@ -32,6 +34,50 @@ Public Class Form_report
 
         SendGoalNotifications(progressTowardsGoals)
         currentReport = "Daily Report"
+    End Sub
+    Private Sub DisplayBudgetAndExpenses(userID As Integer, selectedDate As Date)
+
+        Dim query As String = "
+        SELECT 
+            B.BudgetDate, 
+            B.BudgetAmount AS 'Budget Amount', 
+            E.ExpenseDate,
+            E.Amount AS 'Expense Amount', 
+            E.Description 
+        FROM 
+            (SELECT DISTINCT CategoryID FROM Expense WHERE UserID = @userID) AS Categories
+        LEFT JOIN 
+            Budget B
+        ON 
+            Categories.CategoryID = B.CategoryID
+            AND B.UserID = @userID 
+            AND CONVERT(DATE, B.BudgetDate) = @selectedDate
+        LEFT JOIN 
+            Expense E
+        ON 
+            Categories.CategoryID = E.CategoryID
+            AND E.UserID = @userID 
+            AND CONVERT(DATE, E.ExpenseDate) = @selectedDate
+        WHERE 
+            (B.BudgetAmount IS NOT NULL OR E.Amount IS NOT NULL)
+    "
+
+
+        Dim mergedTable As New DataTable()
+
+
+        Using conn As New SqlConnection(connectionString)
+            Using cmd As New SqlCommand(query, conn)
+                cmd.Parameters.AddWithValue("@userID", userID)
+                cmd.Parameters.AddWithValue("@selectedDate", selectedDate)
+
+                Dim adapter As New SqlDataAdapter(cmd)
+                adapter.Fill(mergedTable)
+            End Using
+        End Using
+
+
+        DataGridView2.DataSource = mergedTable
     End Sub
 
     Private Function GetUserIDByUsername(connectionString As String, username As String) As Integer
@@ -115,6 +161,7 @@ Public Class Form_report
 
         Dim userID As Integer = GetUserIDByUsername(connectionString, username)
 
+        DisplayWeeklyBudgetAndExpenses(userID, startDate, endDate)
 
         Dim weeklyBudgetData As Dictionary(Of Date, Decimal) = GetBudgetsForWeek(userID, startDate, endDate)
 
@@ -132,6 +179,51 @@ Public Class Form_report
         currentReport = "Weekly Report"
     End Sub
 
+    Private Sub DisplayWeeklyBudgetAndExpenses(userID As Integer, startDate As Date, endDate As Date)
+
+        Dim query As String = "
+        SELECT 
+            B.BudgetDate, 
+            COALESCE(B.BudgetAmount, 0) AS 'Budget Amount', 
+            E.ExpenseDate,
+            COALESCE(E.Amount, 0) AS 'Expense Amount', 
+            E.Description 
+        FROM 
+            (SELECT DISTINCT CategoryID FROM Expense WHERE UserID = @userID) AS Categories
+        LEFT JOIN 
+            Budget B
+        ON 
+            Categories.CategoryID = B.CategoryID
+            AND B.UserID = @userID 
+            AND CONVERT(DATE, B.BudgetDate) BETWEEN @startDate AND @endDate
+        LEFT JOIN 
+            Expense E
+        ON 
+            Categories.CategoryID = E.CategoryID
+            AND E.UserID = @userID 
+            AND CONVERT(DATE, E.ExpenseDate) BETWEEN @startDate AND @endDate
+        WHERE 
+            (B.BudgetAmount IS NOT NULL OR E.Amount IS NOT NULL)
+    "
+
+
+        Dim mergedTable As New DataTable()
+
+
+        Using conn As New SqlConnection(connectionString)
+            Using cmd As New SqlCommand(query, conn)
+                cmd.Parameters.AddWithValue("@userID", userID)
+                cmd.Parameters.AddWithValue("@startDate", startDate)
+                cmd.Parameters.AddWithValue("@endDate", endDate)
+
+                Dim adapter As New SqlDataAdapter(cmd)
+                adapter.Fill(mergedTable)
+            End Using
+        End Using
+
+
+        DataGridView2.DataSource = mergedTable
+    End Sub
 
 
     Private Sub GenerateColumnChart(chart As Chart, selectedDate As Date, budgetData As Decimal, expenseData As Decimal)
@@ -304,6 +396,8 @@ Public Class Form_report
         Dim selectedMonth As Integer = DateTime.Today.Month
         Dim selectedYear As Integer = DateTime.Today.Year
 
+        DisplayMonthlyBudgetAndExpenses(userID, selectedMonth, selectedYear)
+
 
         Dim monthlyBudgetData As Dictionary(Of Integer, Decimal) = GetMonthlyBudgetData(userID, selectedMonth, selectedYear)
 
@@ -321,23 +415,64 @@ Public Class Form_report
         currentReport = "Monthly Report"
     End Sub
 
+    Private Sub DisplayMonthlyBudgetAndExpenses(userID As Integer, selectedMonth As Integer, selectedYear As Integer)
+
+        Dim query As String = "
+        SELECT 
+            B.BudgetDate, 
+            COALESCE(B.BudgetAmount, 0) AS 'Budget Amount', 
+            E.ExpenseDate,
+            COALESCE(E.Amount, 0) AS 'Expense Amount', 
+            E.Description 
+        FROM 
+            (SELECT DISTINCT CategoryID FROM Expense WHERE UserID = @userID) AS Categories
+        LEFT JOIN 
+            Budget B
+        ON 
+            Categories.CategoryID = B.CategoryID
+            AND B.UserID = @userID 
+            AND MONTH(CONVERT(DATE, B.BudgetDate)) = @selectedMonth
+            AND YEAR(CONVERT(DATE, B.BudgetDate)) = @selectedYear
+        LEFT JOIN 
+            Expense E
+        ON 
+            Categories.CategoryID = E.CategoryID
+            AND E.UserID = @userID 
+            AND MONTH(CONVERT(DATE, E.ExpenseDate)) = @selectedMonth
+            AND YEAR(CONVERT(DATE, E.ExpenseDate)) = @selectedYear
+        WHERE 
+            (B.BudgetAmount IS NOT NULL OR E.Amount IS NOT NULL)
+    "
+
+
+        Dim mergedTable As New DataTable()
+
+        Using conn As New SqlConnection(connectionString)
+            Using cmd As New SqlCommand(query, conn)
+                cmd.Parameters.AddWithValue("@userID", userID)
+                cmd.Parameters.AddWithValue("@selectedMonth", selectedMonth)
+                cmd.Parameters.AddWithValue("@selectedYear", selectedYear)
+
+                Dim adapter As New SqlDataAdapter(cmd)
+                adapter.Fill(mergedTable)
+            End Using
+        End Using
+
+        DataGridView2.DataSource = mergedTable
+    End Sub
 
     Private Function GetMonthlyBudgetData(userID As Integer, month As Integer, year As Integer) As Dictionary(Of Integer, Decimal)
         Dim monthlyBudgetData As New Dictionary(Of Integer, Decimal)()
         Try
             Using con As New SqlConnection(connectionString)
                 con.Open()
-                Dim query As String = "SELECT MONTH(BudgetDate) AS Month, SUM(BudgetAmount) AS TotalBudget FROM Budget WHERE UserID = @UserID AND YEAR(BudgetDate) = @Year GROUP BY MONTH(BudgetDate)"
+                Dim query As String = "SELECT SUM(BudgetAmount) AS TotalBudget FROM Budget WHERE UserID = @UserID AND MONTH(BudgetDate) = @Month AND YEAR(BudgetDate) = @Year"
                 Using cmd As New SqlCommand(query, con)
                     cmd.Parameters.AddWithValue("@UserID", userID)
+                    cmd.Parameters.AddWithValue("@Month", month)
                     cmd.Parameters.AddWithValue("@Year", year)
-                    Using reader As SqlDataReader = cmd.ExecuteReader()
-                        While reader.Read()
-                            Dim monthNumber As Integer = Convert.ToInt32(reader("Month"))
-                            Dim totalBudget As Decimal = Convert.ToDecimal(reader("TotalBudget"))
-                            monthlyBudgetData(monthNumber) = totalBudget
-                        End While
-                    End Using
+                    Dim totalBudget As Decimal = Convert.ToDecimal(cmd.ExecuteScalar())
+                    monthlyBudgetData(month) = totalBudget
                 End Using
             End Using
         Catch ex As Exception
@@ -351,17 +486,13 @@ Public Class Form_report
         Try
             Using con As New SqlConnection(connectionString)
                 con.Open()
-                Dim query As String = "SELECT MONTH(ExpenseDate) AS Month, SUM(Amount) AS TotalExpense FROM Expense WHERE UserID = @UserID AND YEAR(ExpenseDate) = @Year GROUP BY MONTH(ExpenseDate)"
+                Dim query As String = "SELECT SUM(Amount) AS TotalExpense FROM Expense WHERE UserID = @UserID AND MONTH(ExpenseDate) = @Month AND YEAR(ExpenseDate) = @Year"
                 Using cmd As New SqlCommand(query, con)
                     cmd.Parameters.AddWithValue("@UserID", userID)
+                    cmd.Parameters.AddWithValue("@Month", month)
                     cmd.Parameters.AddWithValue("@Year", year)
-                    Using reader As SqlDataReader = cmd.ExecuteReader()
-                        While reader.Read()
-                            Dim monthNumber As Integer = Convert.ToInt32(reader("Month"))
-                            Dim totalExpense As Decimal = Convert.ToDecimal(reader("TotalExpense"))
-                            monthlyExpenseData(monthNumber) = totalExpense
-                        End While
-                    End Using
+                    Dim totalExpense As Decimal = Convert.ToDecimal(cmd.ExecuteScalar())
+                    monthlyExpenseData(month) = totalExpense
                 End Using
             End Using
         Catch ex As Exception
@@ -417,6 +548,9 @@ Public Class Form_report
 
         Dim userID As Integer = GetUserIDByUsername(connectionString, username)
 
+        Dim currentYear As Integer = DateTime.Today.Year
+
+        DisplayYearlyBudgetAndExpenses(userID, currentYear)
 
         Dim years As List(Of Integer) = GetYearsFromDatabase()
 
@@ -443,7 +577,70 @@ Public Class Form_report
         Next
         currentReport = "Yearly Overview"
     End Sub
+    Private Sub DisplayYearlyBudgetAndExpenses(userID As Integer, selectedYear As Integer)
+        ' Query to fetch budget amount and expense amount with description for each month in the selected year
+        Dim query As String = "
+    SELECT 
+        MONTH_NUMBER.Month AS 'Month', 
+        B.BudgetDate AS 'Budget Date',
+        COALESCE(B.BudgetAmount, 0) AS 'Budget Amount', 
+        E.ExpenseDate AS 'Expense Date',
+        COALESCE(E.Amount, 0) AS 'Expense Amount', 
+        E.Description 
+    FROM 
+        (
+            SELECT 1 AS Month
+            UNION SELECT 2
+            UNION SELECT 3
+            UNION SELECT 4
+            UNION SELECT 5
+            UNION SELECT 6
+            UNION SELECT 7
+            UNION SELECT 8
+            UNION SELECT 9
+            UNION SELECT 10
+            UNION SELECT 11
+            UNION SELECT 12
+        ) AS MONTH_NUMBER
+    LEFT JOIN 
+        (
+            SELECT MONTH(BudgetDate) AS Month, BudgetDate, BudgetAmount, CategoryID 
+            FROM Budget 
+            WHERE UserID = @userID AND YEAR(BudgetDate) = @selectedYear
+        ) AS B
+    ON 
+        MONTH_NUMBER.Month = B.Month
+    LEFT JOIN 
+        (
+            SELECT MONTH(ExpenseDate) AS Month, ExpenseDate, Amount, Description, CategoryID 
+            FROM Expense 
+            WHERE UserID = @userID AND YEAR(ExpenseDate) = @selectedYear
+        ) AS E
+    ON 
+        MONTH_NUMBER.Month = E.Month
+    WHERE 
+        (B.BudgetAmount IS NOT NULL OR E.Amount IS NOT NULL)
+    ORDER BY 
+        'Month' ASC
+    "
 
+        ' Create a new DataTable to hold the merged data
+        Dim yearlyMergedTable As New DataTable()
+
+        ' Execute the query and fill the DataTable
+        Using conn As New SqlConnection(connectionString)
+            Using cmd As New SqlCommand(query, conn)
+                cmd.Parameters.AddWithValue("@userID", userID)
+                cmd.Parameters.AddWithValue("@selectedYear", selectedYear)
+
+                Dim adapter As New SqlDataAdapter(cmd)
+                adapter.Fill(yearlyMergedTable)
+            End Using
+        End Using
+
+        ' Bind the merged data to DataGridView2
+        DataGridView2.DataSource = yearlyMergedTable
+    End Sub
 
     Private Sub GenerateYearlyColumnChart(chart As Chart, years As List(Of Integer), budgetData As Dictionary(Of Integer, Dictionary(Of Integer, Decimal)), expenseData As Dictionary(Of Integer, Dictionary(Of Integer, Decimal)))
 
@@ -675,21 +872,136 @@ Public Class Form_report
         End If
     End Sub
 
-    Private Sub PrintPageHandler(sender As Object, e As PrintPageEventArgs)
-        Dim bmp As New Bitmap(Chart1.Width, Chart1.Height)
-        Chart1.DrawToBitmap(bmp, New Rectangle(0, 0, Chart1.Width, Chart1.Height))
-        e.Graphics.DrawImage(bmp, e.MarginBounds)
+    Private rowIndex As Integer = 0 ' Variable to track the index of the current row being printed
+    Private printedRowIndex As Integer = 0
 
+    Private Sub PrintPageHandler(sender As Object, e As PrintPageEventArgs)
+        ' Set the origin at the upper-left corner of the printing page
+        Dim startX As Integer = e.MarginBounds.Left
+        Dim startY As Integer = e.MarginBounds.Top
+
+        ' Print the chart at the top of the page
+        Dim chartBitmap As New Bitmap(Chart1.Width, Chart1.Height)
+        Chart1.DrawToBitmap(chartBitmap, New Rectangle(0, 0, Chart1.Width, Chart1.Height))
+        e.Graphics.DrawImage(chartBitmap, startX, startY)
+
+        ' Print the report title below the chart
         Dim reportTitle As String = GetReportTitle()
         Dim font As New Font("Arial", 12, FontStyle.Bold)
         Dim brush As New SolidBrush(Color.Black)
-        Dim startX As Single = e.MarginBounds.Left
-        Dim startY As Single = e.MarginBounds.Top - 50
+        startY += chartBitmap.Height + 50 ' Add spacing below the chart
         e.Graphics.DrawString(reportTitle, font, brush, startX, startY)
+
+        ' Adjust startY for the DataGridView
+        startY += e.Graphics.MeasureString(reportTitle, font).Height + 20 ' Add spacing below the report title
+
+        ' Draw column headers
+        For Each column As DataGridViewColumn In DataGridView2.Columns
+            Dim headerBounds As New Rectangle(startX, startY, column.Width, DataGridView2.ColumnHeadersHeight)
+            e.Graphics.DrawString(column.HeaderText, DataGridView2.ColumnHeadersDefaultCellStyle.Font, Brushes.Black, headerBounds)
+            startX += column.Width
+        Next
+
+        ' Adjust startY for the data rows
+        startY += DataGridView2.ColumnHeadersHeight
+
+        ' Calculate the available height for the DataGridView
+        Dim availableHeight As Integer = e.MarginBounds.Height - startY
+
+        ' Print the DataGridView onto the print page
+        Dim rowsPerPage As Integer = availableHeight \ DataGridView2.RowTemplate.Height
+        Dim rowCounter As Integer = 0
+
+        While rowIndex < DataGridView2.RowCount AndAlso rowCounter < rowsPerPage
+            Dim row As DataGridViewRow = DataGridView2.Rows(rowIndex)
+            startX = e.MarginBounds.Left ' Reset startX for each row
+            For Each cell As DataGridViewCell In row.Cells
+                Dim cellBounds As New Rectangle(startX, startY + rowCounter * DataGridView2.RowTemplate.Height, cell.Size.Width, cell.Size.Height)
+                e.Graphics.DrawString(cell.FormattedValue.ToString(), DataGridView2.Font, Brushes.Black, cellBounds)
+                startX += cell.Size.Width
+            Next
+            rowCounter += 1
+            startY += DataGridView2.RowTemplate.Height ' Move to the next row
+            rowIndex += 1 ' Move to the next row index
+        End While
+
+        ' Check if there are more rows to print
+        If rowIndex < DataGridView2.RowCount Then
+            e.HasMorePages = True
+        Else
+            e.HasMorePages = False
+            rowIndex = 0 ' Reset rowIndex for the next print job
+        End If
     End Sub
+
+
+
+    Private Sub DrawDataGridView(ByVal dgv As DataGridView, ByVal g As Graphics, ByVal printArea As Rectangle)
+        ' Set up pens and brushes
+        Dim gridPen As New Pen(dgv.GridColor)
+        Dim headerFont As Font = dgv.ColumnHeadersDefaultCellStyle.Font
+        Dim cellFont As Font = dgv.DefaultCellStyle.Font
+        Dim headerBrush As New SolidBrush(dgv.ColumnHeadersDefaultCellStyle.ForeColor)
+        Dim cellBrush As New SolidBrush(dgv.DefaultCellStyle.ForeColor)
+
+        ' Calculate row height
+        Dim rowHeight As Integer = dgv.RowTemplate.Height
+
+        ' Draw column headers
+        Dim x As Integer = printArea.Left
+        Dim y As Integer = printArea.Top
+        For Each col As DataGridViewColumn In dgv.Columns
+            If x < printArea.Right Then
+                g.DrawString(col.HeaderText, headerFont, headerBrush, x, y)
+                x += col.Width
+            End If
+        Next
+
+        ' Draw rows
+        y += rowHeight
+        Dim startRowIndex As Integer = printedRowIndex
+        Dim endRowIndex As Integer = Math.Min(startRowIndex + (printArea.Height - y) \ rowHeight, dgv.RowCount - 1)
+
+        For i As Integer = startRowIndex To endRowIndex
+            x = printArea.Left
+            For j As Integer = 0 To dgv.Columns.Count - 1
+                If x < printArea.Right Then
+                    Dim cellValue As String = dgv.Rows(i).Cells(j).FormattedValue.ToString()
+                    g.DrawString(cellValue, cellFont, cellBrush, x, y)
+                    x += dgv.Columns(j).Width
+                End If
+            Next
+            y += rowHeight
+        Next
+
+        ' Draw grid lines
+        x = printArea.Left
+        y = printArea.Top + rowHeight
+        For Each col As DataGridViewColumn In dgv.Columns
+            If x < printArea.Right Then
+                g.DrawLine(gridPen, x, printArea.Top, x, printArea.Bottom)
+                x += col.Width
+            End If
+        Next
+        x = printArea.Left
+        For i As Integer = startRowIndex To endRowIndex
+            If y < printArea.Bottom Then
+                g.DrawLine(gridPen, printArea.Left, y, printArea.Right, y)
+                y += rowHeight
+            Else
+                Exit For
+            End If
+        Next
+
+        printedRowIndex = endRowIndex + 1
+    End Sub
+
 
     Private Function GetReportTitle() As String
         Return currentReport
     End Function
 
+    Private Sub DataGridView2_CellContentClick(sender As Object, e As DataGridViewCellEventArgs) Handles DataGridView2.CellContentClick
+
+    End Sub
 End Class
